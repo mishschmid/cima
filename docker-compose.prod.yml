@@ -15,19 +15,23 @@ services:
     restart: unless-stopped
     environment:
       NITRO_PORT: 3000
+      # Read directly from process.env at runtime
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://cima.you}
       DATABASE_URL: postgresql://cima:${POSTGRES_PASSWORD}@postgres:5432/cima
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
-      LLM_CHAT_MODEL: ${LLM_CHAT_MODEL:-gpt-4o}
-      LLM_EXTRACTION_MODEL: ${LLM_EXTRACTION_MODEL:-gpt-4o-mini}
-      OPENAI_VOICE: ${OPENAI_VOICE:-nova}
-      OPENAI_TTS_MODEL: ${OPENAI_TTS_MODEL:-tts-1}
-      SANSA_API_URL: ${SANSA_API_URL:-https://sansa.you}
-      SANSA_SERVICE_SECRET: ${SANSA_SERVICE_SECRET:-}
-      SANSA_USER_ID: ${SANSA_USER_ID:-}
+      # runtimeConfig values are fixed at build time; only NUXT_* names override them at runtime.
+      # Defaults match nuxt.config.ts.
+      NUXT_ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      NUXT_LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      NUXT_LLM_CHAT_MODEL: ${LLM_CHAT_MODEL:-gpt-4o}
+      NUXT_LLM_EXTRACTION_MODEL: ${LLM_EXTRACTION_MODEL:-gpt-4o-mini}
+      NUXT_OPENAI_VOICE: ${OPENAI_VOICE:-marin}
+      NUXT_OPENAI_TTS_MODEL: ${OPENAI_TTS_MODEL:-gpt-4o-mini-tts}
+      NUXT_OPENAI_STT_MODEL: ${OPENAI_STT_MODEL:-gpt-4o-mini-transcribe}
+      NUXT_SANSA_API_URL: ${SANSA_API_URL:-https://sansa.you}
+      NUXT_SANSA_SERVICE_SECRET: ${SANSA_SERVICE_SECRET:-}
+      NUXT_SANSA_USER_ID: ${SANSA_USER_ID:-}
       NUXT_MCP_SPIKE_SECRET: ${MCP_SPIKE_SECRET:-}
     depends_on:
       postgres:
