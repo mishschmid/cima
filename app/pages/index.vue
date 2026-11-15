@@ -49,6 +49,31 @@ const messagesContainer = ref<HTMLElement | null>(null)
 const isSidebarOpen = ref(false)
 const autoVoiceReply = ref(true)
 
+const canSend = computed(() => {
+  return isRecording.value || isTranscribing.value || inputMessage.value.trim().length > 0
+})
+
+const isBusy = computed(() => {
+  return isStreaming.value || isTranscribing.value
+})
+
+const actionButtonTitle = computed(() => {
+  if (isRecording.value) return 'Stop and send'
+  if (canSend.value) return 'Send message'
+  return 'Start voice input'
+})
+
+function handleComposerAction() {
+  if (isBusy.value) return
+  if (isRecording.value) {
+    toggleVoiceRecording()
+  } else if (inputMessage.value.trim().length > 0) {
+    handleSend()
+  } else {
+    toggleVoiceRecording()
+  }
+}
+
 const isHeroView = computed(() => {
   return orangeStartScreen.value && messages.value.length === 0
 })
@@ -88,7 +113,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => messages.value.map((m) => m.content).join(''),
+  [() => messages.value.length, () => messages.value.map((m) => m.content).join('')],
   () => {
     scrollToBottom()
   }
@@ -99,6 +124,11 @@ function scrollToBottom() {
     if (messagesContainer.value) {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
+    requestAnimationFrame(() => {
+      if (messagesContainer.value) {
+        messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+      }
+    })
   })
 }
 
@@ -107,6 +137,7 @@ async function handleSend() {
   if (!text || isStreaming.value) return
   inputMessage.value = ''
   stopSpeaking()
+  scrollToBottom()
   const response = await sendMessage(text)
   costBadgeRef.value?.refresh()
   if (response && autoVoiceReply.value && isPlaying.value) {
@@ -223,32 +254,6 @@ function handleCreateConversation() {
 
           <!-- Hero Composer -->
           <div class="hero-composer">
-            <button
-              :class="[
-                'mic-btn',
-                { 'mic-btn--active': isRecording, 'mic-btn--recording': isRecording },
-              ]"
-              :title="isRecording ? 'Click to stop and send' : 'Start voice input'"
-              @click="toggleVoiceRecording"
-            >
-              <span v-if="isRecording" class="stop-icon" />
-              <svg
-                v-else
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="22"></line>
-              </svg>
-            </button>
-
             <div
               v-if="isRecording"
               class="hero-waveform-wrap"
@@ -263,16 +268,42 @@ function handleCreateConversation() {
               v-model="inputMessage"
               class="hero-input"
               type="text"
-              placeholder="Ask Cima anything…"
+              :placeholder="isTranscribing ? 'Transcribing audio…' : 'Ask Cima anything…'"
+              :disabled="isTranscribing"
               @keydown="handleKeydown"
             />
 
             <button
-              class="hero-send-btn"
-              :disabled="!isRecording && !inputMessage.trim()"
-              @click="isRecording ? toggleVoiceRecording() : handleSend()"
+              type="button"
+              :class="[
+                'hero-action-btn',
+                {
+                  'hero-action-btn--send': canSend,
+                  'hero-action-btn--recording': isRecording,
+                },
+              ]"
+              :disabled="isBusy"
+              :title="actionButtonTitle"
+              :aria-label="actionButtonTitle"
+              @click="handleComposerAction"
             >
-              Send
+              <span class="action-btn__icon" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              </span>
+              <span class="action-btn__text">Send</span>
             </button>
           </div>
 
@@ -391,6 +422,7 @@ function handleCreateConversation() {
               :cost-usd="msg.costUsd"
               :thinking="isStreaming && idx === messages.length - 1 && msg.role === 'assistant'"
               :speaking="isPlaying && idx === messages.length - 1 && msg.role === 'assistant'"
+              :animated="msg.animated"
               @stop-speaking="stopSpeaking"
             />
           </div>
@@ -399,35 +431,6 @@ function handleCreateConversation() {
         <!-- Chat Composer -->
         <footer class="chat-composer-wrap">
           <div class="chat-composer">
-            <button
-              :class="[
-                'composer-mic-btn',
-                {
-                  'composer-mic-btn--active': isRecording,
-                  'composer-mic-btn--recording': isRecording,
-                },
-              ]"
-              :title="isRecording ? 'Click to stop and send' : 'Voice input'"
-              @click="toggleVoiceRecording"
-            >
-              <span v-if="isRecording" class="stop-icon" />
-              <svg
-                v-else
-                width="19"
-                height="19"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="22"></line>
-              </svg>
-            </button>
-
             <div
               v-if="isRecording"
               class="composer-waveform-wrap"
@@ -442,16 +445,42 @@ function handleCreateConversation() {
               v-model="inputMessage"
               class="composer-input"
               type="text"
-              placeholder="Ask Cima anything…"
+              :placeholder="isTranscribing ? 'Transcribing audio…' : 'Ask Cima anything…'"
+              :disabled="isTranscribing"
               @keydown="handleKeydown"
             />
 
             <button
-              class="composer-send-btn"
-              :disabled="!isRecording && !inputMessage.trim()"
-              @click="isRecording ? toggleVoiceRecording() : handleSend()"
+              type="button"
+              :class="[
+                'composer-action-btn',
+                {
+                  'composer-action-btn--send': canSend,
+                  'composer-action-btn--recording': isRecording,
+                },
+              ]"
+              :disabled="isBusy"
+              :title="actionButtonTitle"
+              :aria-label="actionButtonTitle"
+              @click="handleComposerAction"
             >
-              Send
+              <span class="action-btn__icon" aria-hidden="true">
+                <svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="22" />
+                </svg>
+              </span>
+              <span class="action-btn__text">Send</span>
             </button>
           </div>
         </footer>
@@ -722,37 +751,6 @@ function handleCreateConversation() {
   gap: 8px;
   box-sizing: border-box;
 
-  .mic-btn {
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: 0;
-    background: rgba(17, 17, 17, 0.1);
-    color: #111;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    flex: none;
-    transition: background-color 0.15s ease;
-
-    &--active {
-      background: #111;
-      color: #fff;
-    }
-
-    &--recording {
-      background: #111111 !important;
-      box-shadow:
-        0 0 0 2px var(--orange),
-        0 0 0 4px #111111;
-      animation: mic-pulse-hero 1.6s ease-out infinite;
-
-      .stop-icon {
-        background-color: var(--orange);
-      }
-    }
-  }
-
   .hero-waveform-wrap {
     flex: 1;
     min-width: 0;
@@ -773,28 +771,86 @@ function handleCreateConversation() {
     outline: none;
     font-size: 18px;
     color: #111;
-    padding: 0 8px;
+    padding: 0 14px 0 20px;
 
     &::placeholder {
       color: #111;
       opacity: 0.55;
     }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
   }
 
-  .hero-send-btn {
+  .hero-action-btn {
+    position: relative;
     height: 52px;
-    border-radius: var(--radius-pill);
+    width: 52px;
+    min-width: 52px;
+    border-radius: 26px;
     border: 0;
-    background: #111;
-    color: #fff;
-    padding: 0 28px;
-    font-size: 15px;
-    font-weight: 500;
+    outline: none;
+    background: rgba(17, 17, 17, 0.1);
+    color: #111;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     flex: none;
+    overflow: hidden;
+    padding: 0;
+    transition:
+      width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 0.2s ease,
+      color 0.18s ease,
+      box-shadow 0.2s ease,
+      transform 0.12s ease;
 
-    &:hover {
-      opacity: 0.9;
+    &:hover:not(:disabled) {
+      background: rgba(17, 17, 17, 0.16);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    &--send {
+      width: 86px;
+      min-width: 86px;
+      background: #111;
+      color: #fff;
+
+      &:hover:not(:disabled) {
+        background: #222;
+      }
+
+      .action-btn__icon {
+        opacity: 0;
+        transform: scale(0.6);
+        pointer-events: none;
+      }
+
+      .action-btn__text {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+      }
+    }
+
+    &--recording {
+      background: #111111 !important;
+      color: #ffffff !important;
+      box-shadow:
+        0 0 0 2px var(--orange),
+        0 0 0 4px #111111;
+      animation: mic-pulse-hero 1.6s ease-out infinite;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
   }
 }
@@ -951,40 +1007,6 @@ function handleCreateConversation() {
   align-items: center;
   gap: 8px;
 
-  .composer-mic-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 0;
-    background: var(--bg-surface);
-    color: var(--ink);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    flex: none;
-    transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
-
-    &--active {
-      background: var(--orange);
-      color: var(--on-orange);
-    }
-
-    &--recording {
-      background: var(--orange) !important;
-      color: #fff !important;
-      box-shadow:
-        0 0 0 2px var(--bg-surface),
-        0 0 0 4px var(--orange);
-      animation: mic-pulse 1.6s ease-out infinite;
-
-      .stop-icon {
-        background-color: #ffffff;
-      }
-    }
-  }
-
   .composer-waveform-wrap {
     flex: 1;
     min-width: 0;
@@ -997,14 +1019,6 @@ function handleCreateConversation() {
     color: var(--ink);
   }
 
-  .stop-icon {
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    background-color: #ffffff;
-    display: block;
-  }
-
   .composer-input {
     flex: 1;
     min-width: 0;
@@ -1013,29 +1027,120 @@ function handleCreateConversation() {
     outline: none;
     font-size: 17px;
     color: var(--ink);
-    padding: 0 8px;
+    padding: 0 12px 0 18px;
 
     &::placeholder {
       color: var(--ink-2);
     }
-  }
 
-  .composer-send-btn {
-    height: 48px;
-    border-radius: var(--radius-pill);
-    border: 0;
-    background: var(--btn-primary);
-    color: var(--btn-primary-ink);
-    padding: 0 26px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    flex: none;
-
-    &:hover {
-      opacity: 0.9;
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
   }
+
+  .composer-action-btn {
+    position: relative;
+    height: 48px;
+    width: 48px;
+    min-width: 48px;
+    border-radius: 24px;
+    border: 0;
+    outline: none;
+    background: var(--bg-surface);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: none;
+    overflow: hidden;
+    padding: 0;
+    transition:
+      width 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+      background-color 0.2s ease,
+      color 0.18s ease,
+      box-shadow 0.2s ease,
+      transform 0.12s ease;
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+
+    &:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    &--send {
+      width: 80px;
+      min-width: 80px;
+      background: var(--btn-primary);
+      color: var(--btn-primary-ink);
+
+      &:hover:not(:disabled) {
+        opacity: 0.92;
+        box-shadow: none;
+      }
+
+      .action-btn__icon {
+        opacity: 0;
+        transform: scale(0.6);
+        pointer-events: none;
+      }
+
+      .action-btn__text {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+      }
+    }
+
+    &--recording {
+      background: var(--btn-primary) !important;
+      color: var(--btn-primary-ink) !important;
+      box-shadow:
+        0 0 0 2px var(--bg-surface),
+        0 0 0 4px var(--orange);
+      animation: mic-pulse 1.6s ease-out infinite;
+    }
+
+    &:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.action-btn__icon {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  transform: scale(1);
+}
+
+.action-btn__text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  transform: scale(0.7);
+  pointer-events: none;
 }
 
 @keyframes mic-pulse {

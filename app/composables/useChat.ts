@@ -1,3 +1,5 @@
+import { ref } from 'vue'
+
 export interface ConversationItem {
   id: string
   userId: string
@@ -16,6 +18,7 @@ export interface MessageItem {
   totalTokens?: number | null
   costUsd?: string | number | null
   createdAt?: string
+  animated?: boolean
 }
 
 export function useChat() {
@@ -74,26 +77,39 @@ export function useChat() {
 
     error.value = null
 
-    let convId = activeConversationId.value
-    if (!convId) {
-      convId = await createConversation()
-      if (!convId) return null
-    }
-
-    // Optimistically add user message
-    messages.value.push({
+    // Optimistically add user message and assistant placeholder immediately without any delay
+    const userMsg: MessageItem = {
       role: 'user',
       content: trimmed,
-    })
+      animated: true,
+    }
 
-    // Placeholder assistant message for streaming
-    const assistantMsgIndex = messages.value.length
-    messages.value.push({
+    const assistantMsg: MessageItem = {
       role: 'assistant',
       content: '',
-    })
+      animated: true,
+    }
 
+    messages.value.push(userMsg, assistantMsg)
+    const assistantMsgIndex = messages.value.length - 1
     isStreaming.value = true
+
+    let convId = activeConversationId.value
+    if (!convId) {
+      try {
+        const created = await $fetch<ConversationItem>('/api/conversations', {
+          method: 'POST',
+        })
+        conversations.value.unshift(created)
+        activeConversationId.value = created.id
+        convId = created.id
+      } catch (e: any) {
+        error.value = e?.statusMessage || e?.message || 'Failed to create conversation'
+        messages.value = messages.value.filter((m) => m !== userMsg && m !== assistantMsg)
+        isStreaming.value = false
+        return null
+      }
+    }
 
     try {
       const response = await fetch(`/api/conversations/${convId}/messages`, {
@@ -121,6 +137,8 @@ export function useChat() {
         }
       }
 
+      const finalAssistantContent = messages.value[assistantMsgIndex]?.content || null
+
       // Refresh messages list to pick up usage tokens and cost
       const updatedMsgs = await $fetch<MessageItem[]>(`/api/conversations/${convId}/messages`)
       messages.value = updatedMsgs
@@ -129,7 +147,7 @@ export function useChat() {
       const updatedList = await $fetch<ConversationItem[]>('/api/conversations')
       conversations.value = updatedList
 
-      return messages.value[assistantMsgIndex]?.content || null
+      return finalAssistantContent
     } catch (e: any) {
       error.value = e?.message || 'Error while receiving response'
       const target = messages.value[assistantMsgIndex]

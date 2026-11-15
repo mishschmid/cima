@@ -11,6 +11,7 @@ const props = defineProps<{
   costUsd?: string | number | null
   thinking?: boolean
   speaking?: boolean
+  animated?: boolean
 }>()
 
 defineEmits<{
@@ -27,7 +28,7 @@ const formattedCost = computed(() => {
 </script>
 
 <template>
-  <div :class="['message-row', `message-row--${role}`]">
+  <div :class="['message-row', `message-row--${role}`, { 'message-row--animated': animated }]">
     <!-- User Bubble -->
     <div v-if="role === 'user'" class="bubble bubble--user">
       <div class="bubble__header-user">You</div>
@@ -84,6 +85,66 @@ const formattedCost = computed(() => {
 
   &--assistant {
     justify-content: flex-start;
+  }
+
+  &--animated {
+    &.message-row--user {
+      animation: message-pop-user 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+      transform-origin: bottom right;
+
+      .bubble--user {
+        animation: bubble-glow-user 0.35s ease-out both;
+      }
+    }
+
+    &.message-row--assistant {
+      animation: message-pop-assistant 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+      transform-origin: bottom left;
+    }
+  }
+}
+
+@keyframes message-pop-user {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bubble-glow-user {
+  0% {
+    box-shadow: 0 4px 18px rgba(232, 93, 4, 0.35);
+  }
+  100% {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+}
+
+@keyframes message-pop-assistant {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message-row--animated {
+    &.message-row--user,
+    &.message-row--assistant {
+      animation: none;
+    }
+
+    .bubble--user {
+      animation: none;
+    }
   }
 }
 
