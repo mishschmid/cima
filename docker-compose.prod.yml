@@ -28,6 +28,7 @@ services:
       SANSA_API_URL: ${SANSA_API_URL:-https://sansa.you}
       SANSA_SERVICE_SECRET: ${SANSA_SERVICE_SECRET:-}
       SANSA_USER_ID: ${SANSA_USER_ID:-}
+      NUXT_MCP_SPIKE_SECRET: ${MCP_SPIKE_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
