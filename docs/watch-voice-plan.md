@@ -2,6 +2,10 @@
 
 **Goal:** Press the voice button on the Fenix 8, talk to Cima, and hear the answer on the watch speaker, with no need to take out the phone. Through Cima's tools, the same turn can read and write data in the child apps (Sansa/health-core, Done., Ciaro).
 
+> **Status: native app stopped (no-go).** The Fenix 8 only opens Google's assistant; ChatGPT and Claude set as default assistant did not open. See [07-findings.md](./tasks/07-findings.md).
+>
+> **New route: through Gemini.** Gemini supports custom Connectors (MCP servers), and the option is available on the user's account in Switzerland. Cima exposes an MCP server, and Gemini calls it from the watch. See [Task 09](./tasks/09-gemini-mcp.md); its spike (9.0) decides go/no-go.
+
 See [architecture.md](./architecture.md). This plan brings forward part of step 3 (voice) and the "native app later" decision, so it must stay small and **start with a go/no-go test**.
 
 ## How it would work

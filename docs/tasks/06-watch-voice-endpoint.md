@@ -52,7 +52,7 @@ All routes need a browser session and are scoped by `userId`:
 ## 6.7 Voice Turn Endpoint (`server/api/voice/turn.post.ts`)
 
 - Auth: device token (6.2). A session also works, so it can be tested from the browser.
-- Body: `{ text: string, conversationId?: string }`. Validate that `text` is non-empty, ≤ 1000 chars, and that `conversationId` is a uuid owned by the user.
+- Body: `{ text: string, conversationId?: string, language?: string }`. Validate that `text` is non-empty, ≤ 1000 chars, that `conversationId` is a uuid owned by the user, and that `language` is a BCP 47 tag (e.g. `de-CH`). When `language` is set, the voice prompt tells the model to reply in it.
 - Continuity: if `conversationId` is missing, reuse the user's most recent conversation tagged `source = 'voice'` that had a message in the last 2 minutes; otherwise create a new one (title "Voice", `source = 'voice'`, which needs a column on `conversations`).
 - Response: `{ reply: string, conversationId: string, expectsFollowUp: boolean }`. Set `expectsFollowUp` to true when the reply ends with a question (simple heuristic for now).
 - Errors use `createError`: `400` invalid input, `401` bad token, `502` LLM failure with a short `statusMessage` the app can read aloud.

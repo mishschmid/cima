@@ -44,7 +44,10 @@ Write the results to `docs/tasks/07-findings.md` (phone model, Android version, 
 
 1. Short vibration or tone: "listening".
 2. `SpeechRecognizer` (prefer `createOnDeviceSpeechRecognizer` when available), language from settings, partial results on, silence timeout around 1.5 s.
-3. `POST {serverUrl}/api/voice/turn` with `Authorization: Bearer <token>`, body `{ text, conversationId }`, timeout 8 s.
+   - The utterance must always end without a touch on the phone (the watch has no "send" button, see `07-findings.md`): silence timeout, **plus** a hard cap of 15 s of speech, **plus** if the partial transcript hasn't changed for 2 s, treat it as finished.
+   - If pressing the watch button again during a session can be detected (Step 2 of 7.0), use it as "send now".
+   - Short tone when the utterance is closed, so the user knows Cima stopped listening.
+3. `POST {serverUrl}/api/voice/turn` with `Authorization: Bearer <token>`, body `{ text, conversationId, language }`, timeout 8 s. `language` is the recognizer language, so the reply never falls back to English.
 4. `TextToSpeech` speaks `reply`, using the same language.
 5. If `expectsFollowUp` (and that setting is on), go back to step 1, keeping `conversationId`. Otherwise finish the session.
 6. Stop after 3 turns in a row with no speech or 60 s of inactivity.
