@@ -77,8 +77,32 @@ const totalConversations = computed(() => props.conversations.length)
     <div class="sidebar__inner">
       <!-- Header with brand mark & date -->
       <div class="brand">
-        <NuxtLink to="/" class="brand__logo"> cima<span class="brand__dot">.</span> </NuxtLink>
-        <span class="brand__date">{{ todayFormatted }}</span>
+        <NuxtLink to="/" class="brand__logo" @click="emit('close')">
+          <CimaLogo />
+        </NuxtLink>
+        <div class="brand__right">
+          <span class="brand__date">{{ todayFormatted }}</span>
+          <button
+            class="sidebar-close-btn"
+            title="Close navigation"
+            aria-label="Close navigation"
+            @click="emit('close')"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- New conversation button -->
@@ -103,7 +127,11 @@ const totalConversations = computed(() => props.conversations.length)
 
       <!-- Nav segmented pills -->
       <div class="nav-pills">
-        <NuxtLink to="/" :class="['nav-pill', { 'nav-pill--active': activeSection === 'chats' }]">
+        <NuxtLink
+          to="/"
+          :class="['nav-pill', { 'nav-pill--active': activeSection === 'chats' }]"
+          @click="emit('close')"
+        >
           <span>Chats</span>
           <span class="nav-pill__badge">{{ totalConversations }}</span>
         </NuxtLink>
@@ -111,6 +139,7 @@ const totalConversations = computed(() => props.conversations.length)
         <NuxtLink
           to="/memory"
           :class="['nav-pill', { 'nav-pill--active': activeSection === 'memory' }]"
+          @click="emit('close')"
         >
           <span>Memory</span>
         </NuxtLink>
@@ -118,6 +147,7 @@ const totalConversations = computed(() => props.conversations.length)
         <NuxtLink
           to="/settings"
           :class="['nav-pill', { 'nav-pill--active': activeSection === 'settings' }]"
+          @click="emit('close')"
         >
           <span>Settings</span>
         </NuxtLink>
@@ -156,6 +186,29 @@ const totalConversations = computed(() => props.conversations.length)
           <span class="account-card__name">{{ user?.name || 'Cima User' }}</span>
           <span class="account-card__email">{{ user?.email || 'mish.schmid@gmail.com' }}</span>
         </div>
+        <NuxtLink
+          to="/settings"
+          class="account-card__settings"
+          title="Settings"
+          aria-label="Settings"
+          @click="emit('close')"
+        >
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="3"></circle>
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+            ></path>
+          </svg>
+        </NuxtLink>
         <button class="account-card__signout" @click="emit('signOut')">Sign out</button>
       </div>
     </div>
@@ -166,6 +219,7 @@ const totalConversations = computed(() => props.conversations.length)
 .sidebar {
   width: 320px;
   flex: none;
+  order: 2;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -173,13 +227,14 @@ const totalConversations = computed(() => props.conversations.length)
   @media (max-width: 900px) {
     position: fixed;
     top: 0;
-    left: 0;
+    right: 0;
+    left: auto;
     bottom: 0;
     width: 320px;
     z-index: 100;
     background: var(--bg-page);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
-    transform: translateX(-100%);
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.25);
+    transform: translateX(100%);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 
     &--open {
@@ -200,7 +255,7 @@ const totalConversations = computed(() => props.conversations.length)
 
 .brand {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   padding: 0 6px;
 
@@ -217,10 +272,41 @@ const totalConversations = computed(() => props.conversations.length)
     color: var(--orange);
   }
 
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   &__date {
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--ink-2);
+
+    @media (max-width: 900px) {
+      display: none;
+    }
+  }
+}
+
+.sidebar-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  color: var(--ink);
+  border: 0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  @media (min-width: 901px) {
+    display: none;
   }
 }
 
@@ -444,6 +530,26 @@ const totalConversations = computed(() => props.conversations.length)
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  &__settings {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--bg-sunken);
+    color: var(--ink);
+    display: grid;
+    place-items: center;
+    flex: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition:
+      opacity 0.15s ease,
+      background-color 0.15s ease;
+
+    &:hover {
+      opacity: 0.85;
+    }
   }
 
   &__signout {

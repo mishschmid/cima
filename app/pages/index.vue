@@ -6,14 +6,12 @@ import { useAudioPlayer } from '~/composables/useAudioPlayer'
 import { useAuth } from '~/composables/useAuth'
 import { useTheme } from '~/composables/useTheme'
 import ChatMessage from '~/components/ChatMessage.vue'
-import CostBadge from '~/components/CostBadge.vue'
 import AppSidebar from '~/components/AppSidebar.vue'
 import AmbientBackground from '~/components/AmbientBackground.vue'
 import VoiceWaveform from '~/components/VoiceWaveform.vue'
 
 const { user, signOut } = useAuth()
 const { orangeStartScreen } = useTheme()
-const costBadgeRef = ref<InstanceType<typeof CostBadge> | null>(null)
 
 const {
   conversations,
@@ -109,7 +107,6 @@ const formattedFullDate = computed(() => {
 
 onMounted(async () => {
   await loadConversations()
-  costBadgeRef.value?.refresh()
   scrollToBottom()
 })
 
@@ -137,7 +134,6 @@ async function handleSend() {
   stopSpeaking()
   scrollToBottom()
   const response = await sendMessage(text)
-  costBadgeRef.value?.refresh()
   if (response && autoVoiceReply.value && isPlaying.value) {
     await speak(response)
   }
@@ -148,7 +144,6 @@ async function sendQuickTopic(topic: string) {
   inputMessage.value = ''
   stopSpeaking()
   await sendMessage(`Tell me about my ${topic.toLowerCase()} lately.`)
-  costBadgeRef.value?.refresh()
 }
 
 async function toggleVoiceRecording() {
@@ -171,7 +166,6 @@ async function toggleVoiceRecording() {
       } catch {
         speechStream?.cancel()
       }
-      costBadgeRef.value?.refresh()
     }
   } else {
     await startRecording()
@@ -223,9 +217,19 @@ function handleCreateConversation() {
         <!-- Unified Top Header (Hero) -->
         <header class="app-header app-header--hero">
           <div class="app-header__left">
+            <NuxtLink to="/" class="app-header__brand app-header__brand--hero">
+              <CimaLogo line-color="#ffffff" />
+            </NuxtLink>
+            <span class="app-header__divider app-header__divider--hero" />
+            <span class="app-header__title app-header__title--hero">
+              {{ formattedFullDate }}
+            </span>
+          </div>
+          <div class="app-header__right">
             <button
               class="header-btn header-btn--hero header-btn--menu"
-              title="Open navigation"
+              title="Chat list"
+              aria-label="Open chat list"
               @click="isSidebarOpen = true"
             >
               <svg
@@ -243,16 +247,6 @@ function handleCreateConversation() {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
-            <NuxtLink to="/" class="app-header__brand app-header__brand--hero">
-              cima<span class="brand-dot">.</span>
-            </NuxtLink>
-            <span class="app-header__divider app-header__divider--hero" />
-            <span class="app-header__title app-header__title--hero">
-              {{ formattedFullDate }}
-            </span>
-          </div>
-          <div class="app-header__right">
-            <CostBadge ref="costBadgeRef" variant="hero" />
           </div>
         </header>
 
@@ -365,9 +359,39 @@ function handleCreateConversation() {
         <!-- Unified Top Header (Chat) -->
         <header class="app-header">
           <div class="app-header__left">
+            <NuxtLink
+              to="/"
+              class="app-header__brand"
+              title="New conversation"
+              @click.prevent="handleCreateConversation"
+            >
+              <CimaLogo />
+            </NuxtLink>
+            <span class="app-header__divider" />
+            <span class="app-header__title" :title="activeConversationTitle">
+              {{ activeConversationTitle }}
+            </span>
+          </div>
+          <div class="app-header__right">
+            <button class="header-btn" title="New conversation" @click="handleCreateConversation">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
             <button
               class="header-btn header-btn--menu"
-              title="Open navigation"
+              title="Chat list"
+              aria-label="Open chat list"
               @click="isSidebarOpen = true"
             >
               <svg
@@ -383,36 +407,6 @@ function handleCreateConversation() {
                 <line x1="3" y1="12" x2="21" y2="12"></line>
                 <line x1="3" y1="6" x2="21" y2="6"></line>
                 <line x1="3" y1="18" x2="21" y2="18"></line>
-              </svg>
-            </button>
-            <NuxtLink
-              to="/"
-              class="app-header__brand"
-              title="New conversation"
-              @click.prevent="handleCreateConversation"
-            >
-              cima<span class="brand-dot">.</span>
-            </NuxtLink>
-            <span class="app-header__divider" />
-            <span class="app-header__title" :title="activeConversationTitle">
-              {{ activeConversationTitle }}
-            </span>
-          </div>
-          <div class="app-header__right">
-            <CostBadge ref="costBadgeRef" variant="standard" />
-            <button class="header-btn" title="New conversation" @click="handleCreateConversation">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
           </div>
@@ -531,6 +525,7 @@ function handleCreateConversation() {
 
 .main-panel-wrap {
   flex: 1;
+  order: 1;
   min-width: 0;
   height: 100%;
   display: flex;
@@ -607,10 +602,6 @@ function handleCreateConversation() {
     text-decoration: none;
     flex: none;
 
-    @media (min-width: 901px) {
-      display: none;
-    }
-
     &--hero {
       color: #111111;
 
@@ -625,10 +616,6 @@ function handleCreateConversation() {
     height: 14px;
     background: var(--line);
     flex: none;
-
-    @media (min-width: 901px) {
-      display: none;
-    }
 
     &--hero {
       background: rgba(17, 17, 17, 0.18);
@@ -677,6 +664,7 @@ function handleCreateConversation() {
   place-items: center;
   flex: none;
   cursor: pointer;
+  text-decoration: none;
   transition:
     opacity 0.15s ease,
     background-color 0.15s ease;

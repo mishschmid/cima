@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useChat } from '~/composables/useChat'
 import { useTheme } from '~/composables/useTheme'
+import { useCostStats } from '~/composables/useCostStats'
 import AppSidebar from '~/components/AppSidebar.vue'
 
 const { user, signOut } = useAuth()
@@ -19,6 +20,27 @@ const {
   setSendAfterPause,
   setShowTokenCost,
 } = useTheme()
+
+const { currentStats, activePeriod, refresh: refreshStats } = useCostStats()
+
+const formattedTokens = computed(() => {
+  if (!currentStats.value || !currentStats.value.tokens) return '0 tkn'
+  const t = currentStats.value.tokens
+  return `${t.toLocaleString()} tkn`
+})
+
+const formattedCost = computed(() => {
+  if (!currentStats.value) return '$0.000'
+  const val = currentStats.value.costUsd
+  if (val > 0 && val < 0.001) return '<$0.001'
+  return `$${val.toFixed(3)}`
+})
+
+const formattedResponses = computed(() => {
+  if (!currentStats.value) return '0 responses'
+  const c = currentStats.value.count
+  return `${c} ${c === 1 ? 'response' : 'responses'}`
+})
 
 const hasKey = ref(false)
 const maskedKey = ref<string | null>(null)
@@ -118,7 +140,7 @@ async function clearMemory() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadStatus(), loadConversations()])
+  await Promise.all([loadStatus(), loadConversations(), refreshStats()])
 })
 </script>
 
@@ -141,7 +163,7 @@ onMounted(async () => {
     <div class="main-panel-wrap">
       <!-- Mobile Bar -->
       <header class="mobile-nav-bar">
-        <div class="mobile-nav-bar__brand">cima<span class="brand-dot">.</span></div>
+        <div class="mobile-nav-bar__brand"><CimaLogo /></div>
         <div class="mobile-nav-bar__actions">
           <NuxtLink to="/" class="circle-btn" title="Back to chat">
             <svg
@@ -285,6 +307,58 @@ onMounted(async () => {
 
             <div class="setting-row">
               <div class="setting-row__info">
+                <span class="setting-row__label">Timeframe</span>
+                <span class="setting-row__hint">Select range for consumption stats</span>
+              </div>
+              <div class="segmented-control">
+                <button
+                  :class="[
+                    'segmented-control__btn',
+                    { 'segmented-control__btn--active': activePeriod === 'day' },
+                  ]"
+                  @click="activePeriod = 'day'"
+                >
+                  Today
+                </button>
+                <button
+                  :class="[
+                    'segmented-control__btn',
+                    { 'segmented-control__btn--active': activePeriod === 'week' },
+                  ]"
+                  @click="activePeriod = 'week'"
+                >
+                  7 Days
+                </button>
+                <button
+                  :class="[
+                    'segmented-control__btn',
+                    { 'segmented-control__btn--active': activePeriod === 'month' },
+                  ]"
+                  @click="activePeriod = 'month'"
+                >
+                  30 Days
+                </button>
+              </div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-row__info">
+                <span class="setting-row__label">Token consumption</span>
+                <span class="setting-row__hint">Total tokens consumed</span>
+              </div>
+              <div class="pill-chip">{{ formattedTokens }}</div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-row__info">
+                <span class="setting-row__label">Estimated cost</span>
+                <span class="setting-row__hint">API cost ({{ formattedResponses }})</span>
+              </div>
+              <div class="pill-chip">{{ formattedCost }}</div>
+            </div>
+
+            <div class="setting-row">
+              <div class="setting-row__info">
                 <span class="setting-row__label">Token and cost on messages</span>
                 <span class="setting-row__hint">Shown on every Cima reply</span>
               </div>
@@ -406,6 +480,7 @@ onMounted(async () => {
 
 .main-panel-wrap {
   flex: 1;
+  order: 1;
   min-width: 0;
   height: 100%;
   display: flex;

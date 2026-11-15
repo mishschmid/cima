@@ -131,7 +131,7 @@ async function deleteFact(id: string) {
     <div class="main-panel-wrap">
       <!-- Mobile Bar -->
       <header class="mobile-nav-bar">
-        <div class="mobile-nav-bar__brand">cima<span class="brand-dot">.</span></div>
+        <div class="mobile-nav-bar__brand"><CimaLogo /></div>
         <div class="mobile-nav-bar__actions">
           <NuxtLink to="/" class="circle-btn" title="Back to chat">
             <svg
@@ -317,6 +317,7 @@ async function deleteFact(id: string) {
 
 .main-panel-wrap {
   flex: 1;
+  order: 1;
   min-width: 0;
   height: 100%;
   display: flex;
