@@ -47,6 +47,10 @@ export default defineEventHandler(async (event) => {
     setHeader(event, 'content-type', 'audio/mpeg')
     setHeader(event, 'cache-control', 'no-cache')
 
+    if (res.body) {
+      return sendStream(event, res.body)
+    }
+
     const arrayBuffer = await res.arrayBuffer()
     return Buffer.from(arrayBuffer)
   } catch (err: any) {

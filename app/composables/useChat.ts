@@ -71,7 +71,10 @@ export function useChat() {
     }
   }
 
-  async function sendMessage(content: string): Promise<string | null> {
+  async function sendMessage(
+    content: string,
+    options?: { onChunk?: (chunk: string) => void }
+  ): Promise<string | null> {
     const trimmed = content.trim()
     if (!trimmed || isStreaming.value) return null
 
@@ -135,17 +138,26 @@ export function useChat() {
         if (target) {
           target.content += text
         }
+        if (text && options?.onChunk) {
+          options.onChunk(text)
+        }
       }
 
       const finalAssistantContent = messages.value[assistantMsgIndex]?.content || null
 
-      // Refresh messages list to pick up usage tokens and cost
-      const updatedMsgs = await $fetch<MessageItem[]>(`/api/conversations/${convId}/messages`)
-      messages.value = updatedMsgs
+      // Refresh messages list in background to pick up usage tokens and cost without blocking speech
+      $fetch<MessageItem[]>(`/api/conversations/${convId}/messages`)
+        .then((updatedMsgs) => {
+          messages.value = updatedMsgs
+        })
+        .catch(() => {})
 
-      // Refresh conversations list to pick up updated title & order
-      const updatedList = await $fetch<ConversationItem[]>('/api/conversations')
-      conversations.value = updatedList
+      // Refresh conversations list in background to pick up updated title & order
+      $fetch<ConversationItem[]>('/api/conversations')
+        .then((updatedList) => {
+          conversations.value = updatedList
+        })
+        .catch(() => {})
 
       return finalAssistantContent
     } catch (e: any) {

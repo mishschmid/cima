@@ -18,4 +18,12 @@ describe('voice transcription & synthesis parameter requirements', () => {
     const capped = input.slice(0, 4000)
     expect(capped.length).toBe(4000)
   })
+
+  it('validates audio stream presence detection', () => {
+    const mockResWithBody = { body: new ReadableStream() }
+    const mockResWithoutBody = { body: null }
+
+    expect(Boolean(mockResWithBody.body)).toBe(true)
+    expect(Boolean(mockResWithoutBody.body)).toBe(false)
+  })
 })

@@ -41,6 +41,7 @@ const {
   isSynthesizing,
   error: playerError,
   speak,
+  createSpeechStream,
   stop: stopSpeaking,
 } = useAudioPlayer()
 
@@ -112,12 +113,9 @@ onMounted(async () => {
   scrollToBottom()
 })
 
-watch(
-  [() => messages.value.length, () => messages.value.map((m) => m.content).join('')],
-  () => {
-    scrollToBottom()
-  }
-)
+watch([() => messages.value.length, () => messages.value.map((m) => m.content).join('')], () => {
+  scrollToBottom()
+})
 
 function scrollToBottom() {
   nextTick(() => {
@@ -158,11 +156,22 @@ async function toggleVoiceRecording() {
   if (isRecording.value) {
     const transcribedText = await stopRecording()
     if (transcribedText) {
-      const response = await sendMessage(transcribedText)
-      costBadgeRef.value?.refresh()
-      if (response && autoVoiceReply.value) {
-        await speak(response)
+      const speechStream = autoVoiceReply.value ? createSpeechStream() : null
+      try {
+        const response = await sendMessage(transcribedText, {
+          onChunk: (chunk) => {
+            speechStream?.push(chunk)
+          },
+        })
+        if (response) {
+          speechStream?.finish()
+        } else {
+          speechStream?.cancel()
+        }
+      } catch {
+        speechStream?.cancel()
       }
+      costBadgeRef.value?.refresh()
     }
   } else {
     await startRecording()
