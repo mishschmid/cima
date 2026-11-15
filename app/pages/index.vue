@@ -218,7 +218,7 @@ function handleCreateConversation() {
         <header class="app-header app-header--hero">
           <div class="app-header__left">
             <NuxtLink to="/" class="app-header__brand app-header__brand--hero">
-              <CimaLogo line-color="#ffffff" />
+              <CimaLogo line-color="#f3f2ef" />
             </NuxtLink>
             <span class="app-header__divider app-header__divider--hero" />
             <span class="app-header__title app-header__title--hero">
