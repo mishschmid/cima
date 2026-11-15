@@ -19,16 +19,34 @@ export async function validateOpenAiKey(apiKey: string): Promise<void> {
   }
 }
 
+// Short-lived cache so per-sentence TTS calls don't hit the DB and decrypt every time
+const KEY_CACHE_TTL_MS = 5 * 60 * 1000
+const keyCache = new Map<string, { key: string | null; expiresAt: number }>()
+
+export function clearOpenAiKeyCache(userId: string): void {
+  keyCache.delete(userId)
+}
+
+async function loadUserKey(userId: string): Promise<string | null> {
+  const cached = keyCache.get(userId)
+  if (cached && cached.expiresAt > Date.now()) return cached.key
+
+  const [row] = await db
+    .select({ openaiApiKey: user.openaiApiKey })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1)
+
+  const key = row?.openaiApiKey ? decryptSecret(row.openaiApiKey) : null
+  keyCache.set(userId, { key, expiresAt: Date.now() + KEY_CACHE_TTL_MS })
+  return key
+}
+
 export async function getOpenAiKeyForUser(userId: string): Promise<string> {
   if (userId) {
-    const [row] = await db
-      .select({ openaiApiKey: user.openaiApiKey })
-      .from(user)
-      .where(eq(user.id, userId))
-      .limit(1)
-
-    if (row?.openaiApiKey) {
-      return decryptSecret(row.openaiApiKey)
+    const userKey = await loadUserKey(userId)
+    if (userKey) {
+      return userKey
     }
   }
 

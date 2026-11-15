@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { cleanTextForSpeech, splitIntoSentences, SentenceExtractor } from '~/utils/speech'
+import { markLatency } from '~/utils/latency'
 
 interface AudioItem {
   id: number
@@ -59,6 +60,7 @@ export function useAudioPlayer() {
       })
 
       if (sessionId !== currentSessionId) return null
+      markLatency('first TTS response headers')
 
       if (!response.ok) {
         throw new Error(`Synthesis failed: ${response.statusText}`)
@@ -66,6 +68,7 @@ export function useAudioPlayer() {
 
       const blob = await response.blob()
       if (sessionId !== currentSessionId) return null
+      markLatency('first TTS audio downloaded')
 
       return URL.createObjectURL(blob)
     } catch (err: any) {
@@ -83,6 +86,7 @@ export function useAudioPlayer() {
     const clean = cleanTextForSpeech(sentence)
     if (!clean) return
 
+    markLatency('first sentence queued for TTS')
     const abortController = new AbortController()
     const audioPromise = fetchAudio(clean, sessionId, abortController)
 
@@ -148,6 +152,7 @@ export function useAudioPlayer() {
           currentAudio = audio
 
           const cleanup = () => {
+            audio.onplaying = null
             audio.onended = null
             audio.onerror = null
             URL.revokeObjectURL(objectUrl)
@@ -157,6 +162,7 @@ export function useAudioPlayer() {
             resolve()
           }
 
+          audio.onplaying = () => markLatency('first audio playing')
           audio.onended = cleanup
           audio.onerror = () => {
             console.warn('Audio playback error')

@@ -51,4 +51,18 @@ describe('SentenceExtractor', () => {
     expect(extractor.push('2.0 update. ')).toEqual(['The version is 1.2.0 update.'])
     expect(extractor.finish()).toEqual([])
   })
+
+  it('breaks the first chunk early at a clause boundary', () => {
+    const extractor = new SentenceExtractor()
+    const opening = 'That is a great question about your training, '
+    expect(extractor.push(opening + 'and here is more, of the same sentence. ')).toEqual([
+      'That is a great question about your training,',
+      'and here is more, of the same sentence.',
+    ])
+  })
+
+  it('does not break the first chunk at a comma before the minimum length', () => {
+    const extractor = new SentenceExtractor()
+    expect(extractor.push('Sure, I can help. ')).toEqual(['Sure, I can help.'])
+  })
 })

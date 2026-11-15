@@ -3,7 +3,7 @@ import { db } from '../../database'
 import { user } from '../../database/schema'
 import { requireUser } from '../../utils/session'
 import { encryptSecret, decryptSecret, maskSecret } from '../../utils/crypto'
-import { validateOpenAiKey } from '../../utils/aiKeys'
+import { clearOpenAiKeyCache, validateOpenAiKey } from '../../utils/aiKeys'
 
 export default defineEventHandler(async (event) => {
   const authUser = await requireUser(event)
@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
       updatedAt: new Date(),
     })
     .where(eq(user.id, authUser.id))
+  clearOpenAiKeyCache(authUser.id)
 
   return {
     hasKey: true,

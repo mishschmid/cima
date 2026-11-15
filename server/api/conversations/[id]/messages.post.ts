@@ -9,6 +9,8 @@ import { searchRelevantFacts } from '../../../utils/memory/search'
 import { extractFacts } from '../../../utils/memory/extract'
 
 export default defineEventHandler(async (event) => {
+  const requestStart = performance.now()
+  const elapsed = () => Math.round(performance.now() - requestStart)
   const userId = await getCurrentUserId(event)
   const conversationId = getRouterParam(event, 'id')
 
@@ -30,48 +32,45 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Ensure conversation exists and belongs to current user
-  const [conversation] = await db
-    .select()
-    .from(conversations)
-    .where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
-    .limit(1)
+  // Independent lookups run in parallel. History is read before the new message is
+  // inserted and the message is appended in memory, so it can't appear twice.
+  const [[conversation], facts, history, llm] = await Promise.all([
+    db
+      .select()
+      .from(conversations)
+      .where(and(eq(conversations.id, conversationId), eq(conversations.userId, userId)))
+      .limit(1),
+    searchRelevantFacts(userId, content, 8),
+    db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.conversationId, conversationId), eq(messages.userId, userId)))
+      .orderBy(desc(messages.createdAt))
+      .limit(29),
+    getLlm('chat', userId),
+  ])
 
   if (!conversation) {
     throw createError({ statusCode: 404, statusMessage: 'Conversation not found' })
   }
 
-  // Save the user message
-  const [userMessage] = await db
-    .insert(messages)
-    .values({
-      userId,
-      conversationId,
-      role: 'user',
-      content,
-    })
-    .returning()
+  await db.insert(messages).values({
+    userId,
+    conversationId,
+    role: 'user',
+    content,
+  })
 
-  // Search profile facts relevant to the user query & conversation context
-  const facts = await searchRelevantFacts(userId, content, 8)
-  const recentMessages = await db
-    .select()
-    .from(messages)
-    .where(and(eq(messages.conversationId, conversationId), eq(messages.userId, userId)))
-    .orderBy(desc(messages.createdAt))
-    .limit(30)
-
-  // Order back chronologically
-  recentMessages.reverse()
-
-  const systemPrompt = buildSystemPrompt(facts)
-  const chatMessages: ChatMessage[] = [
-    { role: 'system', content: systemPrompt },
-    ...recentMessages.map((m: (typeof recentMessages)[number]) => ({
+  const recentMessages = [
+    ...history.reverse().map((m) => ({
       role: m.role as 'user' | 'assistant' | 'system',
       content: m.content,
     })),
+    { role: 'user' as const, content },
   ]
+
+  const systemPrompt = buildSystemPrompt(facts)
+  const chatMessages: ChatMessage[] = [{ role: 'system', content: systemPrompt }, ...recentMessages]
 
   let recordedUsage: {
     promptTokens: number
@@ -81,7 +80,7 @@ export default defineEventHandler(async (event) => {
     model: string
   } | null = null
 
-  const llm = await getLlm('chat', userId)
+  const prepMs = elapsed()
   const stream = llm.streamChat(chatMessages, {
     onUsage(u) {
       const cost = calculateCost(u.model, u.promptTokens, u.completionTokens)
@@ -105,11 +104,19 @@ export default defineEventHandler(async (event) => {
   const readable = new ReadableStream({
     async start(controller) {
       try {
+        let firstTokenMs: number | null = null
         for await (const chunk of stream) {
+          if (firstTokenMs === null) firstTokenMs = elapsed()
           fullAssistantReply += chunk
           controller.enqueue(encoder.encode(chunk))
         }
         controller.close()
+
+        if (import.meta.dev) {
+          console.info(
+            `[latency] chat prep ${prepMs}ms, first token ${firstTokenMs ?? '-'}ms, done ${elapsed()}ms`
+          )
+        }
 
         // Background persistence after stream completes
         try {

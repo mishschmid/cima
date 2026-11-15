@@ -20,7 +20,10 @@ export default defineEventHandler(async (event) => {
     const mimeType = audioPart.type || 'audio/webm'
 
     const formData = new FormData()
-    formData.append('model', 'whisper-1')
+    formData.append(
+      'model',
+      (useRuntimeConfig().openaiSttModel as string) || 'gpt-4o-mini-transcribe'
+    )
     const uint8 = new Uint8Array(audioPart.data)
     formData.append('file', new Blob([uint8], { type: mimeType }), filename)
 

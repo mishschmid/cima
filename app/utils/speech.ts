@@ -150,6 +150,13 @@ export function splitIntoSentences(text: string): string[] {
  */
 export class SentenceExtractor {
   private buffer = ''
+  private emittedAny = false
+
+  /**
+   * @param firstClauseMinLength The first chunk may break at a comma/semicolon/colon once it is
+   * this long, so the first audio can start before the opening sentence is complete.
+   */
+  constructor(private readonly firstClauseMinLength = 30) {}
 
   /**
    * Pushes a new raw text chunk and returns any newly completed clean sentences.
@@ -174,7 +181,10 @@ export class SentenceExtractor {
             delimIndex = i
             break
           }
-        } else if (i > 100 && (char === ',' || char === ';' || char === ':')) {
+        } else if (
+          i >= (this.emittedAny ? 100 : this.firstClauseMinLength) &&
+          (char === ',' || char === ';' || char === ':')
+        ) {
           const nextChar = this.buffer[i + 1]
           if (nextChar !== undefined && /\s/.test(nextChar)) {
             delimIndex = i
@@ -194,6 +204,7 @@ export class SentenceExtractor {
       const cleaned = cleanTextForSpeech(rawSentence)
       if (cleaned) {
         extracted.push(cleaned)
+        this.emittedAny = true
       }
     }
 
@@ -217,5 +228,6 @@ export class SentenceExtractor {
    */
   reset(): void {
     this.buffer = ''
+    this.emittedAny = false
   }
 }

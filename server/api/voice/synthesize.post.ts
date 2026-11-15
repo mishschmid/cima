@@ -17,8 +17,10 @@ export default defineEventHandler(async (event) => {
   const voice =
     typeof body?.voice === 'string' && body.voice
       ? body.voice
-      : (config.openaiVoice as string) || 'nova'
-  const model = (config.openaiTtsModel as string) || 'tts-1'
+      : (config.openaiVoice as string) || 'marin'
+  const model = (config.openaiTtsModel as string) || 'gpt-4o-mini-tts'
+  // Only the gpt-*-tts models accept speaking instructions
+  const instructions = model.startsWith('gpt-') ? (config.openaiTtsInstructions as string) : ''
 
   try {
     const res = await fetch('https://api.openai.com/v1/audio/speech', {
@@ -32,6 +34,7 @@ export default defineEventHandler(async (event) => {
         voice,
         input: cleanText,
         response_format: 'mp3',
+        ...(instructions ? { instructions } : {}),
       }),
     })
 

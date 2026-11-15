@@ -48,8 +48,12 @@ export default defineNuxtConfig({
     },
     openaiApiKey: process.env.OPENAI_API_KEY ?? '',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? '',
-    openaiVoice: process.env.OPENAI_VOICE ?? 'nova',
-    openaiTtsModel: process.env.OPENAI_TTS_MODEL ?? 'tts-1',
+    openaiVoice: process.env.OPENAI_VOICE ?? 'marin',
+    openaiTtsInstructions:
+      process.env.OPENAI_TTS_INSTRUCTIONS ||
+      'Speak like a warm, relaxed friend in a natural conversational tone. Use native pronunciation for the language of the text.',
+    openaiTtsModel: process.env.OPENAI_TTS_MODEL ?? 'gpt-4o-mini-tts',
+    openaiSttModel: process.env.OPENAI_STT_MODEL ?? 'gpt-4o-mini-transcribe',
     sansaApiUrl: process.env.SANSA_API_URL ?? 'http://localhost:4444',
     sansaServiceSecret: process.env.SANSA_SERVICE_SECRET ?? '',
     sansaUserId: process.env.SANSA_USER_ID ?? '',

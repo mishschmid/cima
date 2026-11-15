@@ -5,6 +5,7 @@ import { useAudioRecorder } from '~/composables/useAudioRecorder'
 import { useAudioPlayer } from '~/composables/useAudioPlayer'
 import { useAuth } from '~/composables/useAuth'
 import { useTheme } from '~/composables/useTheme'
+import { startLatencyTrace, markLatency } from '~/utils/latency'
 import ChatMessage from '~/components/ChatMessage.vue'
 import AppSidebar from '~/components/AppSidebar.vue'
 import AmbientBackground from '~/components/AmbientBackground.vue'
@@ -133,6 +134,7 @@ async function handleSend() {
   inputMessage.value = ''
   stopSpeaking()
   scrollToBottom()
+  startLatencyTrace('text turn')
   const response = await sendMessage(text)
   if (response && autoVoiceReply.value && isPlaying.value) {
     await speak(response)
@@ -149,8 +151,10 @@ async function sendQuickTopic(topic: string) {
 async function toggleVoiceRecording() {
   stopSpeaking()
   if (isRecording.value) {
+    startLatencyTrace('voice turn')
     const transcribedText = await stopRecording()
     if (transcribedText) {
+      markLatency('transcript ready')
       const speechStream = autoVoiceReply.value ? createSpeechStream() : null
       try {
         const response = await sendMessage(transcribedText, {

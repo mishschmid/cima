@@ -16,6 +16,35 @@ export function toOpenAiMessages(
   })
 }
 
+export interface AccumulatedToolCall {
+  id: string
+  name: string
+  arguments: string
+}
+
+type ToolCallDelta = OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta.ToolCall
+
+export function accumulateToolCallDeltas(
+  calls: AccumulatedToolCall[],
+  deltas: ToolCallDelta[]
+): void {
+  for (const delta of deltas) {
+    const call = (calls[delta.index] ??= { id: '', name: '', arguments: '' })
+    if (delta.id) call.id = delta.id
+    if (delta.function?.name) call.name += delta.function.name
+    if (delta.function?.arguments) call.arguments += delta.function.arguments
+  }
+}
+
+function addUsage(
+  total: { promptTokens: number; completionTokens: number; totalTokens: number },
+  usage: OpenAI.CompletionUsage
+): void {
+  total.promptTokens += usage.prompt_tokens
+  total.completionTokens += usage.completion_tokens
+  total.totalTokens += usage.total_tokens
+}
+
 export function createOpenAiProvider(apiKey: string, defaultModel = 'gpt-4o'): LlmProvider {
   if (!apiKey) {
     throw new Error('Missing API key for OpenAI')
@@ -56,12 +85,14 @@ export function createOpenAiProvider(apiKey: string, defaultModel = 'gpt-4o'): L
         return
       }
 
-      // Step 1: Initial call with tool definitions
-      const activeMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
-        toOpenAiMessages(messages)
+      const model = options?.model ?? defaultModel
+      const activeMessages = toOpenAiMessages(messages)
+      const usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 }
 
-      const firstResponse = await client.chat.completions.create({
-        model: options?.model ?? defaultModel,
+      // Stream the tool-enabled call so plain answers reach the client token by token.
+      // Tool call fragments are accumulated and only executed if the model requested any.
+      const firstStream = await client.chat.completions.create({
+        model,
         messages: activeMessages,
         tools: CIMA_TOOLS.map((t) => ({
           type: 'function' as const,
@@ -72,35 +103,55 @@ export function createOpenAiProvider(apiKey: string, defaultModel = 'gpt-4o'): L
           },
         })),
         temperature: options?.temperature ?? 0.7,
+        max_tokens: options?.maxTokens,
+        stream: true,
+        stream_options: { include_usage: true },
       })
 
-      const choice = firstResponse.choices[0]
-      if (!choice) return
+      const toolCalls: AccumulatedToolCall[] = []
+      let firstContent = ''
 
-      // Step 2: Handle tool calls if requested by model
-      if (choice.message.tool_calls && choice.message.tool_calls.length > 0) {
-        activeMessages.push(choice.message)
+      for await (const chunk of firstStream) {
+        if (chunk.usage) addUsage(usage, chunk.usage)
+        const delta = chunk.choices[0]?.delta
+        if (delta?.tool_calls) accumulateToolCallDeltas(toolCalls, delta.tool_calls)
+        if (delta?.content) {
+          firstContent += delta.content
+          yield delta.content
+        }
+      }
 
-        for (const toolCall of choice.message.tool_calls) {
-          let parsedArgs = {}
-          try {
-            parsedArgs = JSON.parse(toolCall.function.arguments || '{}')
-          } catch {
-            parsedArgs = {}
-          }
+      const requestedCalls = toolCalls.filter(Boolean)
 
-          const result = await executeToolCall(toolCall.function.name, parsedArgs)
+      if (requestedCalls.length > 0) {
+        activeMessages.push({
+          role: 'assistant',
+          content: firstContent || null,
+          tool_calls: requestedCalls.map((c) => ({
+            id: c.id,
+            type: 'function' as const,
+            function: { name: c.name, arguments: c.arguments },
+          })),
+        })
 
-          activeMessages.push({
-            role: 'tool',
-            tool_call_id: toolCall.id,
-            content: result,
+        const results = await Promise.all(
+          requestedCalls.map(async (call) => {
+            let parsedArgs = {}
+            try {
+              parsedArgs = JSON.parse(call.arguments || '{}')
+            } catch {
+              parsedArgs = {}
+            }
+            return { id: call.id, result: await executeToolCall(call.name, parsedArgs) }
           })
+        )
+
+        for (const { id, result } of results) {
+          activeMessages.push({ role: 'tool', tool_call_id: id, content: result })
         }
 
-        // Step 3: Stream the final synthesised response
         const secondStream = await client.chat.completions.create({
-          model: options?.model ?? defaultModel,
+          model,
           messages: activeMessages,
           temperature: options?.temperature ?? 0.7,
           max_tokens: options?.maxTokens,
@@ -109,35 +160,15 @@ export function createOpenAiProvider(apiKey: string, defaultModel = 'gpt-4o'): L
         })
 
         for await (const chunk of secondStream) {
-          if (chunk.usage && options?.onUsage) {
-            options.onUsage({
-              promptTokens: chunk.usage.prompt_tokens,
-              completionTokens: chunk.usage.completion_tokens,
-              totalTokens: chunk.usage.total_tokens,
-              model: options?.model ?? defaultModel,
-            })
-          }
+          if (chunk.usage) addUsage(usage, chunk.usage)
           const text = chunk.choices[0]?.delta?.content
           if (text) {
             yield text
           }
         }
-        return
       }
 
-      // If no tool was called, yield the direct message content
-      if (firstResponse.usage && options?.onUsage) {
-        options.onUsage({
-          promptTokens: firstResponse.usage.prompt_tokens,
-          completionTokens: firstResponse.usage.completion_tokens,
-          totalTokens: firstResponse.usage.total_tokens,
-          model: options?.model ?? defaultModel,
-        })
-      }
-
-      if (choice.message.content) {
-        yield choice.message.content
-      }
+      options?.onUsage?.({ ...usage, model })
     },
 
     async completeJson<T>(messages: ChatMessage[], options?: ChatOptions): Promise<T> {

@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { markLatency } from '~/utils/latency'
 
 export interface ConversationItem {
   id: string
@@ -115,6 +116,7 @@ export function useChat() {
     }
 
     try {
+      markLatency('chat request sent')
       const response = await fetch(`/api/conversations/${convId}/messages`, {
         method: 'POST',
         headers: {
@@ -134,6 +136,7 @@ export function useChat() {
         const { done, value } = await reader.read()
         if (done) break
         const text = decoder.decode(value, { stream: true })
+        if (text) markLatency('first text chunk')
         const target = messages.value[assistantMsgIndex]
         if (target) {
           target.content += text
@@ -143,6 +146,7 @@ export function useChat() {
         }
       }
 
+      markLatency('text stream done')
       const finalAssistantContent = messages.value[assistantMsgIndex]?.content || null
 
       // Refresh messages list in background to pick up usage tokens and cost without blocking speech
