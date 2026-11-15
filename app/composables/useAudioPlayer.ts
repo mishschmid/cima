@@ -6,8 +6,16 @@ interface AudioItem {
   id: number
   sessionId: number
   text: string
-  audioPromise: Promise<string | null>
-  abortController: AbortController
+  audio: HTMLAudioElement
+  /** Resolves with the element once enough audio is buffered to start, or null on failure */
+  ready: Promise<HTMLAudioElement | null>
+}
+
+function releaseAudio(audio: HTMLAudioElement) {
+  audio.pause()
+  audio.removeAttribute('src')
+  // Cancels any in-flight download for this element
+  audio.load()
 }
 
 export function useAudioPlayer() {
@@ -16,6 +24,8 @@ export function useAudioPlayer() {
   const error = ref<string | null>(null)
 
   let currentAudio: HTMLAudioElement | null = null
+  // Pausing doesn't fire `ended`, so stop() uses this to release the waiting queue
+  let finishCurrent: (() => void) | null = null
   let currentSessionId = 0
   let isStreamActive = false
   let isProcessingQueue = false
@@ -45,39 +55,26 @@ export function useAudioPlayer() {
     })
   }
 
-  async function fetchAudio(
-    text: string,
-    sessionId: number,
-    abortController: AbortController
-  ): Promise<string | null> {
-    try {
-      const response = await fetch('/api/voice/synthesize', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ text }),
-        signal: abortController.signal,
-      })
+  // The element streams the GET endpoint itself, so playback can begin before the
+  // sentence's audio has fully downloaded. Elements are created as soon as a sentence
+  // is queued, so later sentences buffer while earlier ones play.
+  function prepareAudio(text: string): Pick<AudioItem, 'audio' | 'ready'> {
+    const audio = new Audio()
+    audio.preload = 'auto'
 
-      if (sessionId !== currentSessionId) return null
-      markLatency('first TTS response headers')
-
-      if (!response.ok) {
-        throw new Error(`Synthesis failed: ${response.statusText}`)
+    const ready = new Promise<HTMLAudioElement | null>((resolve) => {
+      audio.oncanplay = () => {
+        markLatency('first TTS audio playable')
+        resolve(audio)
       }
-
-      const blob = await response.blob()
-      if (sessionId !== currentSessionId) return null
-      markLatency('first TTS audio downloaded')
-
-      return URL.createObjectURL(blob)
-    } catch (err: any) {
-      if (err?.name === 'AbortError' || sessionId !== currentSessionId) {
-        return null
+      audio.onerror = () => {
+        if (audio.getAttribute('src')) console.warn('Synthesis error for sentence:', text)
+        resolve(null)
       }
-      console.warn('Synthesis error for sentence:', text, err)
-      return null
-    }
+    })
+
+    audio.src = `/api/voice/synthesize?${new URLSearchParams({ text })}`
+    return { audio, ready }
   }
 
   function enqueueSentence(sentence: string, sessionId: number) {
@@ -87,15 +84,11 @@ export function useAudioPlayer() {
     if (!clean) return
 
     markLatency('first sentence queued for TTS')
-    const abortController = new AbortController()
-    const audioPromise = fetchAudio(clean, sessionId, abortController)
-
     queue.push({
       id: nextItemId++,
       sessionId,
       text: clean,
-      audioPromise,
-      abortController,
+      ...prepareAudio(clean),
     })
 
     notifyQueue()
@@ -127,13 +120,11 @@ export function useAudioPlayer() {
         }
         isSynthesizing.value = true
 
-        const objectUrl = await item.audioPromise
-        if (session !== currentSessionId) {
-          if (objectUrl) URL.revokeObjectURL(objectUrl)
-          break
-        }
+        const audio = await item.ready
+        if (session !== currentSessionId) break
 
-        if (!objectUrl) {
+        if (!audio) {
+          releaseAudio(item.audio)
           queue.shift()
           continue
         }
@@ -142,25 +133,19 @@ export function useAudioPlayer() {
         isSynthesizing.value = false
 
         await new Promise<void>((resolve) => {
-          if (session !== currentSessionId) {
-            URL.revokeObjectURL(objectUrl)
-            resolve()
-            return
-          }
-
-          const audio = new Audio(objectUrl)
           currentAudio = audio
 
           const cleanup = () => {
             audio.onplaying = null
             audio.onended = null
             audio.onerror = null
-            URL.revokeObjectURL(objectUrl)
             if (currentAudio === audio) {
               currentAudio = null
             }
+            finishCurrent = null
             resolve()
           }
+          finishCurrent = cleanup
 
           audio.onplaying = () => markLatency('first audio playing')
           audio.onended = cleanup
@@ -175,6 +160,7 @@ export function useAudioPlayer() {
           })
         })
 
+        releaseAudio(audio)
         if (session === currentSessionId && queue[0] === item) {
           queue.shift()
         }
@@ -200,15 +186,12 @@ export function useAudioPlayer() {
     if (currentAudio) {
       try {
         currentAudio.pause()
-        currentAudio.currentTime = 0
       } catch {}
-      currentAudio = null
     }
+    finishCurrent?.()
 
     for (const item of queue) {
-      try {
-        item.abortController.abort()
-      } catch {}
+      releaseAudio(item.audio)
     }
     queue = []
 

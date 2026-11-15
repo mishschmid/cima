@@ -8,6 +8,9 @@ import { calculateCost } from '../../../utils/llm/pricing'
 import { searchRelevantFacts } from '../../../utils/memory/search'
 import { extractFacts } from '../../../utils/memory/extract'
 
+// Earlier messages sent to the model; a shorter history gets a faster first token
+const HISTORY_LIMIT = 12
+
 export default defineEventHandler(async (event) => {
   const requestStart = performance.now()
   const elapsed = () => Math.round(performance.now() - requestStart)
@@ -46,7 +49,7 @@ export default defineEventHandler(async (event) => {
       .from(messages)
       .where(and(eq(messages.conversationId, conversationId), eq(messages.userId, userId)))
       .orderBy(desc(messages.createdAt))
-      .limit(29),
+      .limit(HISTORY_LIMIT),
     getLlm('chat', userId),
   ])
 

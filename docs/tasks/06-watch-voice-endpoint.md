@@ -2,6 +2,8 @@
 
 **Goal:** Give non-browser clients (first: the "Cima Voice" Android assistant app, used from a Garmin Fenix 8) a text-in / text-out endpoint. A device authenticates with a revocable bearer token, sends what the user said, and gets back a short, speakable reply. Speech-to-text and TTS happen on the phone, not on the server.
 
+**Blocked until** the feasibility spike (Task 07.0) passes. See [watch-voice-plan.md](../watch-voice-plan.md).
+
 Flow: `Fenix 8 voice button → Android default assistant (Cima Voice) → STT → POST /api/voice/turn → TTS on watch speaker`.
 
 ---
@@ -70,7 +72,7 @@ All routes need a browser session and are scoped by `userId`:
 - Manual check:
   ```sh
   curl -X POST http://localhost:3000/api/voice/turn \
-    -H "Authorization: Bearer chi_dev_…" -H "Content-Type: application/json" \
+    -H "Authorization: Bearer cima_dev_…" -H "Content-Type: application/json" \
     -d '{"text":"What do I have today?"}'
   ```
 - `yarn typecheck`, `yarn lint`, `yarn test:run`.

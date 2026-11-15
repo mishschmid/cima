@@ -2,20 +2,31 @@
 
 **Goal:** A small Android app that registers as the phone's **default digital assistant**. When the Fenix 8 voice-assistant button is pressed, Android opens Cima Voice instead of Gemini. It listens through the watch mic, sends the text to `POST /api/voice/turn` (Task 06), and speaks the reply on the watch speaker.
 
-Depends on: Task 06.
+Depends on: Task 06 (for 7.1+). 7.0 comes before everything else.
 
 The app lives in a separate repo (`cima-android`), not in this Nuxt repo. Kotlin, min SDK 30, no third-party dependencies beyond AndroidX + OkHttp (or `HttpURLConnection`). Installed from an APK, not the Play Store.
 
 ---
 
-## 7.0 Feasibility Check (do this first, ~1 h)
+## 7.0 Feasibility Spike (do this first, ~1 day)
 
-Prove on the real hardware before writing the app:
+This is the go/no-go gate for the whole plan ([watch-voice-plan.md](../watch-voice-plan.md)). Do it **before Task 06**. No Cima backend is needed.
 
-1. Install any third-party assistant app, set it via _Settings → Apps → Default apps → Digital assistant app_, and press the Fenix 8 voice button. **Does the watch open that app, or only Google/Gemini?**
-2. While it is active, do the mic input and spoken output go through the **watch**, or through the phone?
+Build a throwaway Android app that registers as the default digital assistant (`VoiceInteractionService` + `ASSIST` / `VOICE_COMMAND` activity, as in 7.1). It only logs and shows on screen: how it was launched (intent/action, extras), the available audio input/output devices, and the level of the recorded audio. It plays a fixed test tone/phrase with `TextToSpeech`.
 
-Write the results to `docs/tasks/07-findings.md`. If (1) fails, skip to Task 08 (notification path) and treat this task as blocked.
+Set it via _Settings → Apps → Default apps → Digital assistant app_, then test with the Fenix 8:
+
+1. **Launch (A1):** Does the watch button open the spike app, or only Google/Gemini/Bixby, or nothing?
+2. **Mic (A2):** Is the watch listed as an input device, and does speaking into the watch produce audio in the app (vs. only the phone mic)? Does Garmin Connect hold the mic instead?
+3. **Speaker (A2):** Is the test phrase heard on the watch speaker?
+4. **Locked phone (A3):** Repeat 1–3 with the phone locked and the screen off.
+5. **Speech quality (A4):** Run `SpeechRecognizer` on a few sentences in English, German and Swiss German through the watch mic.
+6. **Latency (A5):** Time from button press to the app starting, and to the test phrase being heard.
+
+Write the results to `docs/tasks/07-findings.md` (phone model, Android version, Garmin Connect version, watch firmware, pass/fail per item).
+
+- 1–4 pass → continue with Task 06, then 7.1+.
+- Any of 1–4 fails → stop. Use the fallback in [watch-voice-plan.md](../watch-voice-plan.md#fallback-if-the-spike-fails).
 
 ## 7.1 Assistant Registration
 

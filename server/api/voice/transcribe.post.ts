@@ -20,10 +20,12 @@ export default defineEventHandler(async (event) => {
     const mimeType = audioPart.type || 'audio/webm'
 
     const formData = new FormData()
-    formData.append(
-      'model',
-      (useRuntimeConfig().openaiSttModel as string) || 'gpt-4o-mini-transcribe'
-    )
+    const config = useRuntimeConfig()
+    formData.append('model', (config.openaiSttModel as string) || 'gpt-4o-mini-transcribe')
+    // A language hint without forcing one language; short phrases are otherwise often misdetected
+    if (config.openaiSttPrompt) {
+      formData.append('prompt', config.openaiSttPrompt as string)
+    }
     const uint8 = new Uint8Array(audioPart.data)
     formData.append('file', new Blob([uint8], { type: mimeType }), filename)
 

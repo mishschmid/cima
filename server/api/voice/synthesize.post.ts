@@ -1,66 +1,8 @@
-import { getOpenAiKeyForUser } from '../../utils/aiKeys'
 import { getCurrentUserId } from '../../utils/currentUser'
+import { streamSpeech } from '../../utils/tts'
 
 export default defineEventHandler(async (event) => {
   const userId = await getCurrentUserId(event)
-  const apiKey = await getOpenAiKeyForUser(userId)
-  const config = useRuntimeConfig()
-
   const body = await readBody<{ text?: unknown; voice?: unknown }>(event)
-  const text = typeof body?.text === 'string' ? body.text.trim() : ''
-
-  if (!text) {
-    throw createError({ statusCode: 400, statusMessage: 'Text content is required' })
-  }
-
-  const cleanText = text.slice(0, 4000)
-  const voice =
-    typeof body?.voice === 'string' && body.voice
-      ? body.voice
-      : (config.openaiVoice as string) || 'marin'
-  const model = (config.openaiTtsModel as string) || 'gpt-4o-mini-tts'
-  // Only the gpt-*-tts models accept speaking instructions
-  const instructions = model.startsWith('gpt-') ? (config.openaiTtsInstructions as string) : ''
-
-  try {
-    const res = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        voice,
-        input: cleanText,
-        response_format: 'mp3',
-        ...(instructions ? { instructions } : {}),
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error('TTS API error:', res.status, errText)
-      throw createError({
-        statusCode: res.status,
-        statusMessage: `TTS error: ${errText}`,
-      })
-    }
-
-    setHeader(event, 'content-type', 'audio/mpeg')
-    setHeader(event, 'cache-control', 'no-cache')
-
-    if (res.body) {
-      return sendStream(event, res.body)
-    }
-
-    const arrayBuffer = await res.arrayBuffer()
-    return Buffer.from(arrayBuffer)
-  } catch (err: any) {
-    console.error('Speech synthesis error:', err)
-    throw createError({
-      statusCode: err?.statusCode || 500,
-      statusMessage: err?.statusMessage || err?.message || 'Failed to synthesize speech',
-    })
-  }
+  return streamSpeech(event, userId, body?.text, body?.voice)
 })
