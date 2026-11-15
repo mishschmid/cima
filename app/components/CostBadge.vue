@@ -49,11 +49,11 @@ const formattedTokens = computed(() => {
 .cost-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   border-radius: var(--radius-pill);
-  padding: 5px 14px 5px 5px;
+  padding: 4px 10px 4px 4px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   flex: none;
   border: none;
   cursor: pointer;
@@ -64,6 +64,21 @@ const formattedTokens = computed(() => {
     opacity: 0.9;
   }
 
+  .cost-badge__period {
+    border-radius: var(--radius-pill);
+    padding: 3px 8px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+  }
+
+  @media (max-width: 600px) {
+    .cost-badge__tokens {
+      display: none;
+    }
+  }
+
   &--standard {
     background: var(--bg-sunken);
     color: var(--ink);
@@ -71,11 +86,6 @@ const formattedTokens = computed(() => {
     .cost-badge__period {
       background: var(--orange);
       color: var(--on-orange);
-      border-radius: var(--radius-pill);
-      padding: 4px 10px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
     }
 
     .cost-badge__cost {
@@ -95,11 +105,6 @@ const formattedTokens = computed(() => {
     .cost-badge__period {
       background: #111111;
       color: var(--orange);
-      border-radius: var(--radius-pill);
-      padding: 4px 10px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
     }
 
     .cost-badge__cost {

@@ -176,60 +176,45 @@ function handleCreateConversation() {
 
     <!-- Main Container Panel -->
     <div class="main-panel-wrap">
-      <!-- Mobile Top Navigation Header -->
-      <header class="mobile-nav-bar">
-        <div class="mobile-nav-bar__brand">cima<span class="brand-dot">.</span></div>
-        <div class="mobile-nav-bar__actions">
-          <button class="circle-btn" title="New conversation" @click="handleCreateConversation">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-          </button>
-          <button
-            class="circle-btn circle-btn--dark"
-            title="Open navigation"
-            @click="isSidebarOpen = true"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="3" y1="12" x2="21" y2="12"></line>
-              <line x1="3" y1="6" x2="21" y2="6"></line>
-              <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-      </header>
-
       <!-- VIEW A: Orange Hero Screen (D3) -->
       <main v-if="isHeroView" class="main-panel main-panel--hero">
         <AmbientBackground variant="hero" :listening="isRecording" />
 
-        <!-- Hero Top Header -->
-        <div class="hero-header">
-          <div class="hero-header__meta">
-            <span class="hero-header__label">New conversation</span>
-            <span class="hero-header__date">{{ formattedFullDate }}</span>
+        <!-- Unified Top Header (Hero) -->
+        <header class="app-header app-header--hero">
+          <div class="app-header__left">
+            <button
+              class="header-btn header-btn--hero header-btn--menu"
+              title="Open navigation"
+              @click="isSidebarOpen = true"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <NuxtLink to="/" class="app-header__brand app-header__brand--hero">
+              cima<span class="brand-dot">.</span>
+            </NuxtLink>
+            <span class="app-header__divider app-header__divider--hero" />
+            <span class="app-header__title app-header__title--hero">
+              {{ formattedFullDate }}
+            </span>
           </div>
-          <CostBadge ref="costBadgeRef" variant="hero" />
-        </div>
+          <div class="app-header__right">
+            <CostBadge ref="costBadgeRef" variant="hero" />
+          </div>
+        </header>
 
         <!-- Hero Center Section -->
         <div class="hero-center">
@@ -337,35 +322,60 @@ function handleCreateConversation() {
       <main v-else class="main-panel main-panel--chat">
         <AmbientBackground :listening="isRecording" />
 
-        <!-- Chat Header -->
-        <header class="chat-header">
-          <div class="chat-header__info">
-            <span class="chat-header__meta">Conversation · {{ messages.length }} messages</span>
-            <h2 class="chat-header__title">{{ activeConversationTitle }}</h2>
-          </div>
-          <CostBadge ref="costBadgeRef" variant="standard" />
-          <NuxtLink to="/settings" class="circle-btn" title="Settings">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+        <!-- Unified Top Header (Chat) -->
+        <header class="app-header">
+          <div class="app-header__left">
+            <button
+              class="header-btn header-btn--menu"
+              title="Open navigation"
+              @click="isSidebarOpen = true"
             >
-              <line x1="4" y1="21" x2="4" y2="14"></line>
-              <line x1="4" y1="10" x2="4" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12" y2="3"></line>
-              <line x1="20" y1="21" x2="20" y2="16"></line>
-              <line x1="20" y1="12" x2="20" y2="3"></line>
-              <line x1="1" y1="14" x2="7" y2="14"></line>
-              <line x1="9" y1="8" x2="15" y2="8"></line>
-              <line x1="17" y1="16" x2="23" y2="16"></line>
-            </svg>
-          </NuxtLink>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <NuxtLink
+              to="/"
+              class="app-header__brand"
+              title="New conversation"
+              @click.prevent="handleCreateConversation"
+            >
+              cima<span class="brand-dot">.</span>
+            </NuxtLink>
+            <span class="app-header__divider" />
+            <span class="app-header__title" :title="activeConversationTitle">
+              {{ activeConversationTitle }}
+            </span>
+          </div>
+          <div class="app-header__right">
+            <CostBadge ref="costBadgeRef" variant="standard" />
+            <button class="header-btn" title="New conversation" @click="handleCreateConversation">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+          </div>
         </header>
 
         <!-- Message Stream -->
@@ -489,57 +499,8 @@ function handleCreateConversation() {
   flex-direction: column;
 }
 
-.mobile-nav-bar {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg-page);
-  flex: none;
-
-  @media (max-width: 900px) {
-    display: flex;
-  }
-
-  &__brand {
-    font-size: 36px;
-    font-weight: 500;
-    letter-spacing: -0.065em;
-    line-height: 0.8;
-  }
-
-  &__actions {
-    display: flex;
-    gap: 8px;
-  }
-}
-
 .brand-dot {
   color: var(--orange);
-}
-
-.circle-btn {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  background: var(--bg-sunken);
-  color: var(--ink);
-  border: 0;
-  display: grid;
-  place-items: center;
-  flex: none;
-  cursor: pointer;
-  text-decoration: none;
-  transition: opacity 0.15s ease;
-
-  &:hover {
-    opacity: 0.85;
-  }
-
-  &--dark {
-    background: var(--btn-primary);
-    color: var(--btn-primary-ink);
-  }
 }
 
 .main-panel {
@@ -558,14 +519,8 @@ function handleCreateConversation() {
   &--hero {
     background: var(--orange);
     color: var(--on-orange);
-    padding: 28px 40px;
+    padding: 0;
     box-sizing: border-box;
-    gap: 28px;
-
-    @media (max-width: 768px) {
-      padding: 20px 18px;
-      gap: 16px;
-    }
   }
 
   &--chat {
@@ -573,32 +528,145 @@ function handleCreateConversation() {
   }
 }
 
-/* Hero Section Styles */
-.hero-header {
+/* Unified App Header */
+.app-header {
   position: relative;
-  z-index: 1;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  height: 52px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-surface);
+  flex: none;
 
-  &__meta {
+  @media (min-width: 901px) {
+    padding: 0 24px;
+    height: 54px;
+  }
+
+  &--hero {
+    background: transparent;
+    border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  }
+
+  &__left {
     display: flex;
-    flex-direction: column;
-    line-height: 1.15;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
   }
 
-  &__label {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--on-orange);
+  &__brand {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -0.065em;
+    line-height: 0.8;
+    color: var(--ink);
+    text-decoration: none;
+    flex: none;
+
+    @media (min-width: 901px) {
+      display: none;
+    }
+
+    &--hero {
+      color: #111111;
+
+      .brand-dot {
+        color: #ffffff;
+      }
+    }
   }
 
-  &__date {
-    font-size: 11px;
-    color: var(--on-orange-muted);
+  &__divider {
+    width: 1px;
+    height: 14px;
+    background: var(--line);
+    flex: none;
+
+    @media (min-width: 901px) {
+      display: none;
+    }
+
+    &--hero {
+      background: rgba(17, 17, 17, 0.18);
+    }
+  }
+
+  &__title {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+
+    @media (min-width: 901px) {
+      font-size: 15px;
+    }
+
+    &--hero {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: rgba(17, 17, 17, 0.65);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
   }
 }
 
+.header-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  color: var(--ink);
+  border: 0;
+  display: grid;
+  place-items: center;
+  flex: none;
+  cursor: pointer;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease;
+
+  &:hover {
+    opacity: 0.85;
+  }
+
+  &--menu {
+    background: var(--btn-primary);
+    color: var(--btn-primary-ink);
+
+    @media (min-width: 901px) {
+      display: none;
+    }
+  }
+
+  &--hero {
+    background: rgba(17, 17, 17, 0.1);
+    color: #111111;
+
+    &:hover {
+      background: rgba(17, 17, 17, 0.18);
+    }
+  }
+}
+
+/* Hero Section Styles */
 .hero-center {
   position: relative;
   z-index: 1;
@@ -607,6 +675,12 @@ function handleCreateConversation() {
   flex-direction: column;
   justify-content: flex-end;
   gap: 22px;
+  padding: 24px 40px;
+
+  @media (max-width: 768px) {
+    padding: 16px 18px;
+    gap: 16px;
+  }
 }
 
 .hero-greeting {
@@ -837,49 +911,16 @@ function handleCreateConversation() {
 }
 
 /* Chat View Styles */
-.chat-header {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 24px 28px 16px;
-  border-bottom: 1px solid var(--line);
-
-  &__info {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 0;
-    flex: 1;
-  }
-
-  &__meta {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--ink-2);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  &__title {
-    font-size: 30px;
-    font-weight: 500;
-    letter-spacing: -0.035em;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin: 0;
-  }
-}
-
 .chat-messages-container {
   position: relative;
   z-index: 1;
   flex: 1;
   overflow-y: auto;
-  padding: 20px 28px;
+  padding: 16px 20px;
+
+  @media (min-width: 901px) {
+    padding: 20px 28px;
+  }
 }
 
 .chat-messages-inner {
