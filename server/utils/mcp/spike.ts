@@ -17,12 +17,18 @@ export interface JsonRpcResponse {
 
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05']
 
+const NAME_HINT =
+  'Speech recognition often mishears the name "Cima" (pronounced "Chee-ma") as ' +
+  '"Jima", "Chima", "Sima", "Gima", "Cheema", "Tschima" or "Kima"; treat all of these as Cima. ' +
+  'Also use this tool when the user says "ask my companion".'
+
 const ASK_CIMA_TOOL = {
   name: 'ask_cima',
   title: 'Ask Cima',
   description:
     "Send the user's message to Cima, their personal companion, and get Cima's reply. " +
-    "Pass the user's words unchanged and read the reply to the user verbatim.",
+    "Pass the user's words unchanged and read the reply to the user verbatim. " +
+    NAME_HINT,
   inputSchema: {
     type: 'object',
     properties: {
@@ -73,7 +79,8 @@ export function handleSpikeMessage(msg: unknown, now = new Date()): JsonRpcRespo
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'cima', title: 'Cima', version: '0.0.1-spike' },
         instructions:
-          'Use ask_cima whenever the user addresses Cima ("ask Cima", "tell Cima", "Cima, …").',
+          'Use ask_cima whenever the user addresses Cima ("ask Cima", "tell Cima", "Cima, …"). ' +
+          NAME_HINT,
       })
     }
     case 'ping':
