@@ -60,6 +60,7 @@ export default defineNuxtConfig({
     sansaApiUrl: process.env.SANSA_API_URL ?? 'http://localhost:4444',
     sansaServiceSecret: process.env.SANSA_SERVICE_SECRET ?? '',
     sansaUserId: process.env.SANSA_USER_ID ?? '',
+    mcpSpikeSecret: process.env.MCP_SPIKE_SECRET ?? '',
   },
 
   routeRules: {

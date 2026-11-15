@@ -1,6 +1,7 @@
 import { getOptionalUser } from '~~/server/utils/session'
 
-const PUBLIC_PREFIXES = ['/api/auth/']
+// /api/mcp/ is protected by its own secret (Task 09.0 spike)
+const PUBLIC_PREFIXES = ['/api/auth/', '/api/mcp/']
 const PUBLIC_PATHS = new Set(['/api/health'])
 
 export default defineEventHandler(async (event) => {
